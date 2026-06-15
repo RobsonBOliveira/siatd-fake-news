@@ -1,4 +1,4 @@
-# SATD – Sistema de Apoio à Tomada de Decisão para Fake News
+# SIATD – Sistema inteligente de Apoio à Tomada de Decisão para a verificação de notícias.
 
 Sistema de aprendizado de máquina para análise de notícias em português,
 baseado no [Fake.Br Corpus](https://github.com/roneysco/Fake.br-Corpus).
@@ -8,17 +8,15 @@ baseado no [Fake.Br Corpus](https://github.com/roneysco/Fake.br-Corpus).
 ## Estrutura do Projeto
 
 ```
-fake_news_satd/
+siatd_fake_news/
 ├── data/
-│   ├── preprocessed/      ← CSVs do Fake.Br Corpus (pasta "preprocessed")
-│   ├── raw/               ← CSVs originais (se desejar aplicar pré-proc. próprio)
-│   ├── train/             ← Splits de treino (gerado automaticamente)
-│   └── test/              ← Splits de teste (gerado automaticamente)
-├── models/
+│   ├── preprocessed/            ← CSV do Fake.Br Corpus
+│   └── raw/                     ← CSVs originais (se desejar aplicar pré-proc. próprio)
+├── models/                      ← Modelos persistidos (pós-treino)
 │   ├── naive_bayes.pkl
 │   ├── svm.pkl
 │   ├── random_forest.pkl
-│   ├── tfidf.pkl          ← Vetorizador persistido
+│   ├── tfidf.pkl
 │   └── meta.pkl
 ├── src/
 │   ├── preprocessing/
@@ -30,15 +28,17 @@ fake_news_satd/
 │   ├── evaluation/
 │   │   └── metrics.py           ← Métricas e matrizes de confusão
 │   └── prediction/
-│       └── predictor.py         ← SATD: probabilidade, confiança, palavras
-├── input/
-│   └── noticia.txt              ← Notícia a classificar
+│       └── predictor.py         ← SIATD: probabilidade, confiança, palavras
+├── input/                       ← Notícia a classificar
+│   └── noticia.txt
 ├── output/
-│   ├── resultado.json           ← Saída do SATD
+│   ├── resultado.json           ← Saída do SIATD
 │   ├── model_comparison.json    ← Métricas comparativas
 │   └── confusion_matrix_*.png   ← Matrizes de confusão
 ├── run.py                       ← Ponto de entrada principal
-└── requirements.txt
+├── clean.py                     ← Rotina de limpeza
+├── requirements.txt
+└── .gitignore
 ```
 
 ---
@@ -58,7 +58,7 @@ pip install -r requirements.txt
 Coloque o CSV do Fake.Br Corpus em `data/preprocessed/` e execute:
 
 ```bash
-python run.py train data/preprocessed/fake_news.csv
+python run.py train data/preprocessed/pre-processed.csv
 ```
 
 O CSV deve conter as colunas `text` (ou `preprocessed_news`) e `label` (`fake`/`true`).
@@ -67,17 +67,17 @@ Por padrão, assume-se que o texto já está pré-processado (pasta `preprocesse
 Para aplicar o pipeline de limpeza em CSVs brutos:
 
 ```bash
-python run.py train data/raw/fake_news.csv --raw
+python run.py train data/raw/nome_do_arquivo.csv --raw
 ```
 
 #### Opções de vetorizador
 
 ```bash
 # TF-IDF (padrão, recomendado)
-python run.py train data/preprocessed/fake_news.csv --vec tfidf
+python run.py train data/preprocessed/nome_do_arquivo.csv --vec tfidf
 
 # Bag of Words
-python run.py train data/preprocessed/fake_news.csv --vec bow
+python run.py train data/preprocessed/nome_do_arquivo.csv --vec bow
 ```
 
 ---
@@ -87,15 +87,15 @@ python run.py train data/preprocessed/fake_news.csv --vec bow
 Coloque o arquivo `.txt` da notícia em `input/` e execute:
 
 ```bash
-python run.py predict input/noticia.txt
+python run.py predict input/nome_do_arquivo.txt
 ```
 
 Escolhendo o modelo:
 
 ```bash
-python run.py predict input/noticia.txt --model naive_bayes
-python run.py predict input/noticia.txt --model svm           # padrão
-python run.py predict input/noticia.txt --model random_forest
+python run.py predict input/nome_do_arquivo.txt --model naive_bayes
+python run.py predict input/nome_do_arquivo.txt --model svm           # padrão
+python run.py predict input/nome_do_arquivo.txt --model random_forest
 ```
 
 ---
@@ -110,7 +110,7 @@ Gera dados sintéticos, treina e executa uma predição de ponta a ponta.
 
 ---
 
-## Saída do SATD (`output/resultado.json`)
+## Saída do SIATD (`output/resultado.json`)
 
 ```json
 {
@@ -159,11 +159,11 @@ O módulo `src/preprocessing/text_processor.py` reproduz o padrão do Fake.Br Co
 
 ## Modelos Implementados
 
-| Modelo         | Classe sklearn            | `predict_proba` |
-|----------------|---------------------------|-----------------|
-| Naive Bayes    | `MultinomialNB`           | Nativo          |
+| Modelo         | Classe sklearn            | `predict_proba`              |
+|----------------|---------------------------|------------------------------|
+| Naive Bayes    | `MultinomialNB`           | Nativo                       |
 | SVM            | `LinearSVC` + Calibração  | Via `CalibratedClassifierCV` |
-| Random Forest  | `RandomForestClassifier`  | Nativo          |
+| Random Forest  | `RandomForestClassifier`  | Nativo                       |
 
 ---
 
@@ -174,11 +174,3 @@ O módulo `src/preprocessing/text_processor.py` reproduz o padrão do Fake.Br Co
 - Comparação entre modelos (`output/model_comparison.json`)
 
 ---
-
-## Roadmap
-
-- [ ] Integração com Word2Vec / FastText
-- [ ] BERTimbau (transformers)
-- [ ] Interface web (Flask/Streamlit)
-- [ ] Busca por similaridade na base de treino
-- [ ] Relatório PDF exportável
