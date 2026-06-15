@@ -32,6 +32,10 @@ def load_dataset(csv_path: str) -> pd.DataFrame:
     df = pd.read_csv(csv_path)
     df.columns = [c.strip().lower() for c in df.columns]
 
+    # Remove coluna index
+    if "index" in df.columns:
+        df = df.drop("index", axis=1)
+
     # Normaliza nome da coluna de texto
     for col in ["preprocessed_news", "text", "body", "news"]:
         if col in df.columns:
@@ -50,7 +54,9 @@ def load_dataset(csv_path: str) -> pd.DataFrame:
     # Mapeia rótulos para 0/1
     label_map = {"fake": 0, "false": 0, "0": 0,
                  "true": 1, "real": 1, "1": 1}
-    df["label"] = df["label"].str.lower().map(label_map)
+    
+    df["label"] = df["label"].astype(str).str.strip().str.lower().map(label_map)
+
     df = df.dropna(subset=["label"])
     df["label"] = df["label"].astype(int)
 
