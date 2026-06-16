@@ -19,6 +19,10 @@ siatd_fake_news/
 │   ├── tfidf.pkl
 │   └── meta.pkl
 ├── src/
+│   ├── eda/
+│   │   ├── exploratory_analysis.py ← Análise exploratória de dados
+│   │   ├── visualization.py        ← Gráficos e word clouds
+│   │   └── report_generator.py     ← Relatório automático (Markdown)
 │   ├── preprocessing/
 │   │   └── text_processor.py    ← Pipeline de limpeza e normalização
 │   ├── feature_extraction/
@@ -32,6 +36,13 @@ siatd_fake_news/
 ├── input/                       ← Notícia a classificar
 │   └── noticia.txt
 ├── output/
+│   ├── eda/                     ← Saídas da EDA (gráficos + relatório)
+│   │   ├── eda_report.md
+│   │   ├── class_distribution_*.png
+│   │   ├── char_count_*.png
+│   │   ├── word_count_*.png
+│   │   ├── top20_words_*.png
+│   │   └── wordcloud_*.png
 │   ├── resultado.json           ← Saída do SIATD
 │   ├── model_comparison.json    ← Métricas comparativas
 │   └── confusion_matrix_*.png   ← Matrizes de confusão
@@ -52,6 +63,38 @@ pip install -r requirements.txt
 ---
 
 ## Uso
+
+### 0. Análise Exploratória de Dados (EDA)
+
+Antes do treinamento, recomenda-se executar a EDA para compreender
+as características do dataset:
+
+```bash
+python run.py eda data/preprocessed/pre-processed.csv
+```
+
+O comando gera gráficos e um relatório Markdown em `output/eda/`:
+
+| Artefato | Descrição |
+|----------|-----------|
+| `class_distribution_bar.png` / `pie.png` | Distribuição das classes (fake/true) |
+| `char_count_histogram.png` / `boxplot.png` | Comprimento dos textos em caracteres |
+| `word_count_histogram.png` / `boxplot.png` | Comprimento dos textos em palavras |
+| `top20_words_overall.png` / `fake.png` / `true.png` | Top-20 palavras mais frequentes |
+| `wordcloud_overall.png` / `fake.png` / `true.png` | Nuvens de palavras |
+| `eda_report.md` | Relatório completo com tabelas e interpretações |
+
+#### Integração com o treinamento
+
+Para executar a EDA automaticamente antes do treinamento:
+
+```bash
+python run.py train data/preprocessed/pre-processed.csv --eda
+```
+
+O fluxo completo é: **Carregamento → EDA → Pré-processamento → Vetorização → Treinamento → Avaliação**.
+
+---
 
 ### 1. Treinamento
 
