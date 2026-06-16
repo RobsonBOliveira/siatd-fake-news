@@ -10,7 +10,8 @@ baseado no [Fake.Br Corpus](https://github.com/roneysco/Fake.br-Corpus).
 ```
 siatd_fake_news/
 ├── data/
-│   ├── preprocessed/            ← CSV do Fake.Br Corpus
+│   ├── preprocessed/           
+│   │   └── pre-processed.csv    ← CSV do Fake.Br Corpus
 │   └── raw/                     ← CSVs originais (se desejar aplicar pré-proc. próprio)
 ├── models/                      ← Modelos persistidos (pós-treino)
 │   ├── naive_bayes.pkl
