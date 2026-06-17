@@ -43,7 +43,8 @@ siatd_fake_news/
 │   │   ├── char_count_*.png
 │   │   ├── word_count_*.png
 │   │   ├── top20_words_*.png
-│   │   └── wordcloud_*.png
+│   │   ├── wordcloud_*.png
+│   │   └── correlation_mi.png
 │   ├── resultado.json           ← Saída do SIATD
 │   ├── model_comparison.json    ← Métricas comparativas
 │   └── confusion_matrix_*.png   ← Matrizes de confusão
@@ -83,6 +84,7 @@ O comando gera gráficos e um relatório Markdown em `output/eda/`:
 | `word_count_histogram.png` / `boxplot.png` | Comprimento dos textos em palavras |
 | `top20_words_overall.png` / `fake.png` / `true.png` | Top-20 palavras mais frequentes |
 | `wordcloud_overall.png` / `fake.png` / `true.png` | Nuvens de palavras |
+| `correlation_mi.png` | Mutual Information das top-20 palavras × label |
 | `eda_report.md` | Relatório completo com tabelas e interpretações |
 
 #### Integração com o treinamento

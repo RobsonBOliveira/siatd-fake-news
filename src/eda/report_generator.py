@@ -191,9 +191,69 @@ def generate_report(
     _("")
 
     # =================================================================
-    # 6. Interpretação e Insights
+    # 6. Correlações
     # =================================================================
-    _("## 6. Interpretação e Insights")
+    _("## 6. Correlações")
+    _("")
+
+    corr = analysis_results.get("correlation_analysis", {})
+
+    # --- 6.1 Mutual Information ---
+    mi_words = corr.get("mi_words", [])
+    if mi_words:
+        _("### 6.1 Mutual Information: Top Palavras × Label")
+        _("")
+        _(
+            "*Quanto maior o MI, mais a palavra discrimina entre "
+            "notícias fake e verdadeiras.*"
+        )
+        _("")
+        _("| # | Palavra | Mutual Information |")
+        _("|---|---------|---------------------|")
+        for i, item in enumerate(mi_words, 1):
+            _(f"| {i} | `{item['word']}` | {item['mi_score']:.6f} |")
+        _("")
+
+    # --- 6.2 Correlação ponto-bisserial ---
+    char_corr = corr.get("char_corr")
+    word_corr = corr.get("word_corr")
+    if char_corr is not None or word_corr is not None:
+        _("### 6.2 Correlação Ponto-Bisserial: Comprimento × Classe")
+        _("")
+        _("*Mede a associação linear entre o comprimento do texto "
+          "(caracteres/palavras) e o label binário (fake=0, true=1).*")
+        _("")
+        _("| Métrica | Correlação (r) | p-valor |")
+        _("|---------|---------------|---------|")
+        if char_corr is not None:
+            _(f"| Caracteres | {char_corr['correlation']:.6f} | {char_corr['p_value']:.6f} |")
+        if word_corr is not None:
+            _(f"| Palavras | {word_corr['correlation']:.6f} | {word_corr['p_value']:.6f} |")
+        _("")
+
+        # Interpretação
+        if char_corr is not None and abs(char_corr["correlation"]) > 0.2:
+            direction = (
+                "mais longas" if char_corr["correlation"] > 0
+                else "mais curtas"
+            )
+            _(
+                f"🔍 Correlação moderada entre caracteres e classe "
+                f"(r = {char_corr['correlation']:.3f}): "
+                f"textos verdadeiros tendem a ser **{direction}**."
+            )
+        elif char_corr is not None:
+            _(
+                "🔍 A correlação entre comprimento e classe é **fraca** "
+                f"(r = {char_corr['correlation']:.3f}), indicando que o "
+                "modelo não usará o comprimento como atalho preditivo."
+            )
+        _("")
+
+    # =================================================================
+    # 7. Interpretação e Insights
+    # =================================================================
+    _("## 7. Interpretação e Insights")
     _("")
 
     # Identificar disparidade de comprimento
@@ -260,9 +320,9 @@ def generate_report(
     _("")
 
     # =================================================================
-    # 7. Referência das Visualizações
+    # 8. Referência das Visualizações
     # =================================================================
-    _("## 7. Referência das Visualizações")
+    _("## 8. Referência das Visualizações")
     _("")
 
     def _img(key: str, caption: str) -> None:
@@ -296,6 +356,9 @@ def generate_report(
     _img("wc_overall", "Word Cloud — Geral")
     _img("wc_fake", "Word Cloud — Fake")
     _img("wc_true", "Word Cloud — Verdadeira")
+
+    _("### Correlações")
+    _img("mi_heatmap", "Mutual Information — Top 20 palavras × Label")
 
     _("---")
     _("")
@@ -362,7 +425,11 @@ if __name__ == "__main__":
 
     eda = ExploratoryAnalysis(csv_arg)
     results = eda.run_all()
-    charts = generate_all_charts(eda.df, results["word_frequency"])
+    charts = generate_all_charts(
+        eda.df,
+        results["word_frequency"],
+        results.get("correlation_analysis"),
+    )
     rpt_path = generate_report(
         results, charts,
         os.path.join(OUTPUT_DIR, "eda_report.md")

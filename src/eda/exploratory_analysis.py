@@ -16,6 +16,16 @@ import pandas as pd
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
+# ---------------------------------------------------------------------------
+# Import opcional com fallback (scipy)
+# ---------------------------------------------------------------------------
+
+try:
+    from scipy.stats import pointbiserialr
+    HAS_SCIPY = True
+except ImportError:
+    HAS_SCIPY = False
+
 
 # ---------------------------------------------------------------------------
 # Classe auxiliar para estatísticas descritivas
@@ -384,6 +394,117 @@ class ExploratoryAnalysis:
         }
 
     # ------------------------------------------------------------------
+    # 6. Análise de Correlações
+    # ------------------------------------------------------------------
+
+    def correlation_analysis(self, top_n: int = 50, mi_top_n: int = 20) -> Dict:
+        """
+        Análise de correlação entre features textuais e o label.
+
+        Calcula duas medidas:
+
+        1. **Mutual Information (MI)** entre as *top-N* palavras mais
+           frequentes e o label — mede o poder discriminativo de cada
+           palavra. Retorna as *mi_top_n* palavras com maior MI.
+        2. **Correlação ponto-bisserial** entre ``char_count`` /
+           ``word_count`` e o label binário (``fake`` = 0, ``true`` = 1).
+
+        .. note::
+           A correlação ponto-bisserial depende do **scipy**. Se o
+           pacote não estiver instalado, ``char_corr`` e ``word_corr``
+           serão ``None``.
+
+        Parameters
+        ----------
+        top_n : int
+            Número de palavras mais frequentes a considerar para a MI
+            (padrão: 50).
+        mi_top_n : int
+            Número de palavras com maior MI a retornar (padrão: 20).
+
+        Returns
+        -------
+        dict
+            Chaves:
+
+            - ``mi_words`` : list of dict
+              Lista de ``{"word": str, "mi_score": float}`` ordenada
+              por MI decrescente (tamanho ``mi_top_n``).
+            - ``char_corr`` : dict or None
+              ``{"correlation": float, "p_value": float}`` para a
+              correlação ponto-bisserial com a contagem de caracteres.
+            - ``word_corr`` : dict or None
+              ``{"correlation": float, "p_value": float}`` para a
+              correlação ponto-bisserial com a contagem de palavras.
+        """
+        from sklearn.feature_selection import mutual_info_classif
+
+        # --------------------------------------------------------------
+        # 6.1 Mutual Information — top-N palavras × label
+        # --------------------------------------------------------------
+
+        # Obtém as top-N palavras mais frequentes (geral)
+        freq_data = self.word_frequency(top_n=top_n)
+        top_words = [item["word"] for item in freq_data["overall"]]
+
+        # Monta matriz documento-termo (contagem) para essas palavras
+        dt_matrix = np.zeros((len(self.df), len(top_words)), dtype=np.int32)
+        for i, text in enumerate(self.df["text"]):
+            words = text.split()
+            for j, word in enumerate(top_words):
+                dt_matrix[i, j] = words.count(word)
+
+        # Binariza o label: fake=0, true=1
+        y = (self.df["label"] == "true").astype(int).values
+
+        # Calcula Mutual Information
+        mi_scores = mutual_info_classif(dt_matrix, y, random_state=42)
+
+        # Ordena por MI decrescente e seleciona as top mi_top_n
+        mi_word_scores = sorted(
+            [
+                {"word": word, "mi_score": round(float(score), 6)}
+                for word, score in zip(top_words, mi_scores)
+            ],
+            key=lambda x: x["mi_score"],
+            reverse=True,
+        )[:mi_top_n]
+
+        # --------------------------------------------------------------
+        # 6.2 Correlação ponto-bisserial — comprimento × label
+        # --------------------------------------------------------------
+
+        char_counts = self.df["text"].str.len().values.astype(float)
+        word_counts = self.df["text"].str.split().str.len().values.astype(float)
+
+        char_corr = None
+        word_corr = None
+
+        if HAS_SCIPY:
+            char_r, char_p = pointbiserialr(char_counts, y)
+            word_r, word_p = pointbiserialr(word_counts, y)
+            char_corr = {
+                "correlation": round(float(char_r), 6),
+                "p_value":     round(float(char_p), 6),
+            }
+            word_corr = {
+                "correlation": round(float(word_r), 6),
+                "p_value":     round(float(word_p), 6),
+            }
+        else:
+            print(
+                "  [!] scipy não disponível — correlação ponto-bisserial "
+                "ignorada."
+            )
+            print("       Instale com: pip install scipy")
+
+        return {
+            "mi_words":  mi_word_scores,
+            "char_corr": char_corr,
+            "word_corr": word_corr,
+        }
+
+    # ------------------------------------------------------------------
     # Execução completa
     # ------------------------------------------------------------------
 
@@ -395,32 +516,36 @@ class ExploratoryAnalysis:
         -------
         dict
             Chaves: dataset_overview, text_statistics, word_frequency,
-            vocabulary_analysis, balance_analysis.
+            vocabulary_analysis, balance_analysis, correlation_analysis.
         """
         print("\n=== ANÁLISE EXPLORATÓRIA DE DADOS (EDA) ===")
 
-        print("\n[1/5] Visão geral do dataset...")
+        print("\n[1/6] Visão geral do dataset...")
         overview = self.dataset_overview()
 
-        print("[2/5] Estatísticas de texto...")
+        print("[2/6] Estatísticas de texto...")
         text_stats = self.text_statistics()
 
-        print("[3/5] Frequência de palavras...")
+        print("[3/6] Frequência de palavras...")
         freq = self.word_frequency()
 
-        print("[4/5] Análise de vocabulário...")
+        print("[4/6] Análise de vocabulário...")
         vocab = self.vocabulary_analysis()
 
-        print("[5/5] Análise de balanceamento...")
+        print("[5/6] Análise de balanceamento...")
         balance = self.balance_analysis()
+
+        print("[6/6] Análise de correlações...")
+        corr = self.correlation_analysis()
 
         print("[OK] EDA concluída.\n")
         return {
-            "dataset_overview":    overview,
-            "text_statistics":     text_stats,
-            "word_frequency":      freq,
-            "vocabulary_analysis": vocab,
-            "balance_analysis":    balance,
+            "dataset_overview":     overview,
+            "text_statistics":      text_stats,
+            "word_frequency":       freq,
+            "vocabulary_analysis":  vocab,
+            "balance_analysis":     balance,
+            "correlation_analysis": corr,
         }
 
 

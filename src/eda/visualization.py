@@ -370,12 +370,83 @@ def plot_wordclouds(
 
 
 # ---------------------------------------------------------------------------
+# 6. Heatmap de Correlação (Mutual Information)
+# ---------------------------------------------------------------------------
+
+def plot_correlation_heatmap(
+    mi_data: List[Dict],
+    output_dir: Optional[str] = None,
+) -> str:
+    """
+    Gera um gráfico de barras horizontal com as palavras de maior
+    Mutual Information (poder discriminativo entre fake e verdadeira).
+
+    As barras são coloridas com um gradiente vermelho → amarelo → verde
+    conforme o valor de MI (menor → maior).
+
+    Parameters
+    ----------
+    mi_data : list of dict
+        Lista de ``{"word": str, "mi_score": float}`` ordenada por MI
+        decrescente (resultado de
+        ``ExploratoryAnalysis.correlation_analysis()["mi_words"]``).
+    output_dir : str, optional
+        Diretório de saída. Padrão: ``output/eda/``.
+
+    Returns
+    -------
+    str
+        Caminho do arquivo gerado, ou string vazia se matplotlib/scipy
+        não estiver disponível.
+    """
+    out = output_dir or EDA_OUTPUT_DIR
+    _ensure_dir(out)
+
+    if not HAS_PLOT:
+        print(
+            "  [!] matplotlib/seaborn não disponíveis — "
+            "heatmap de correlação ignorado."
+        )
+        return ""
+
+    if not mi_data:
+        print("  [!] Dados de MI vazios — heatmap de correlação ignorado.")
+        return ""
+
+    # Inverte a ordem para exibir a palavra com maior MI no topo
+    words = [item["word"] for item in mi_data][::-1]
+    scores = [item["mi_score"] for item in mi_data][::-1]
+
+    # Gradiente de cor: vermelho (MI baixo) → verde (MI alto)
+    norm = plt.Normalize(min(scores), max(scores))
+    colors = plt.cm.RdYlGn(norm(scores))
+
+    fig, ax = plt.subplots(figsize=(10, 8))
+    ax.barh(words, scores, color=colors, edgecolor="white", height=0.7)
+    ax.set_title(
+        "Top Palavras por Mutual Information (Label)",
+        fontsize=14, fontweight="bold",
+    )
+    ax.set_xlabel("Mutual Information")
+
+    for i, val in enumerate(scores):
+        ax.text(
+            val + max(scores) * 0.005, i,
+            f"{val:.4f}", va="center", fontsize=9,
+        )
+
+    fpath = os.path.join(out, "correlation_mi.png")
+    return _save_and_close(fig, fpath)
+
+
+# ---------------------------------------------------------------------------
 # Orquestrador
 # ---------------------------------------------------------------------------
 
 def generate_all_charts(
     df: pd.DataFrame,
     freq_data: Dict[str, List[Dict]],
+    corr_data: Optional[Dict] = None,
     output_dir: Optional[str] = None,
 ) -> Dict[str, Dict[str, str]]:
     """
@@ -387,6 +458,9 @@ def generate_all_charts(
         DataFrame com colunas ``text`` e ``label``.
     freq_data : dict
         Resultado de ``ExploratoryAnalysis.word_frequency()``.
+    corr_data : dict, optional
+        Resultado de ``ExploratoryAnalysis.correlation_analysis()``.
+        Se omitido, o heatmap de correlação não é gerado.
     output_dir : str, optional
         Diretório de saída. Padrão: ``output/eda/``.
 
@@ -395,27 +469,36 @@ def generate_all_charts(
     dict
         Dicionário aninhado com os caminhos de cada categoria de gráfico.
         Chaves: class_distribution, text_histograms, text_boxplots,
-        top_words, wordclouds.
+        top_words, wordclouds, correlation.
     """
     out = output_dir or EDA_OUTPUT_DIR
     _ensure_dir(out)
 
     print("\n=== GERANDO GRÁFICOS EDA ===")
 
-    print("\n[1/5] Distribuição de classes...")
+    print("\n[1/6] Distribuição de classes...")
     class_dist = plot_class_distribution(df["label"], out)
 
-    print("[2/5] Histogramas de comprimento...")
+    print("[2/6] Histogramas de comprimento...")
     histograms = plot_text_length_histograms(df, out)
 
-    print("[3/5] Boxplots de comprimento...")
+    print("[3/6] Boxplots de comprimento...")
     boxplots = plot_text_length_boxplots(df, out)
 
-    print("[4/5] Top palavras...")
+    print("[4/6] Top palavras...")
     top = plot_top_words(freq_data, output_dir=out)
 
-    print("[5/5] Nuvens de palavras...")
+    print("[5/6] Nuvens de palavras...")
     clouds = plot_wordclouds(df, out)
+
+    print("[6/6] Heatmap de correlação (MI)...")
+    corr_chart: Dict[str, str] = {}
+    if corr_data:
+        mi_path = plot_correlation_heatmap(
+            corr_data.get("mi_words", []), out
+        )
+        if mi_path:
+            corr_chart["mi_heatmap"] = mi_path
 
     print("[OK] Gráficos concluídos.\n")
     return {
@@ -424,6 +507,7 @@ def generate_all_charts(
         "text_boxplots":      boxplots,
         "top_words":          top,
         "wordclouds":         clouds,
+        "correlation":        corr_chart,
     }
 
 
@@ -443,5 +527,9 @@ if __name__ == "__main__":
 
     eda = ExploratoryAnalysis(csv_arg)
     results = eda.run_all()
-    paths = generate_all_charts(eda.df, results["word_frequency"])
+    paths = generate_all_charts(
+        eda.df,
+        results["word_frequency"],
+        results.get("correlation_analysis"),
+    )
     print("Arquivos gerados:", json.dumps(paths, ensure_ascii=False, indent=2))

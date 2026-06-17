@@ -33,7 +33,10 @@ def _run_eda(csv_path: str, top_n: int = 20):
 
     eda = ExploratoryAnalysis(csv_path)
     results = eda.run_all()
-    chart_paths = generate_all_charts(eda.df, results["word_frequency"], eda_output)
+    chart_paths = generate_all_charts(
+        eda.df, results["word_frequency"],
+        results.get("correlation_analysis"), eda_output,
+    )
     report_path = generate_report(results, chart_paths,
                                   os.path.join(eda_output, "eda_report.md"))
     return results, chart_paths, report_path
