@@ -17,7 +17,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from src.preprocessing.text_processor import preprocess
-from src.feature_extraction.vectorizer import build_tfidf, save_vectorizer
+from src.feature_extraction.vectorizer import build_tfidf, build_bow, save_vectorizer
 from src.evaluation.metrics import evaluate_model
 
 MODELS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "models")
