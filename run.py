@@ -3,7 +3,7 @@ run.py
 Ponto de entrada principal do SATD de Fake News.
 
 Uso:
-  python run.py train   <caminho_csv> [--vec tfidf|bow] [--eda]
+  python run.py train   <caminho_csv> [--vec tfidf|bow] [--raw] [--eda] [--optimize]
   python run.py predict <caminho_txt> [--model naive_bayes|svm|random_forest]
   python run.py eda     <caminho_csv> [--top-n N]
   python run.py demo    (usa dados sintéticos para demonstração)
@@ -59,6 +59,7 @@ def cmd_train(args):
         csv_path=args.csv,
         vectorizer_type=args.vec,
         already_preprocessed=not args.raw,
+        optimize=args.optimize,
     )
     compare_models(metrics)
     print("\n[OK] Treinamento concluído.")
@@ -161,6 +162,8 @@ def main():
                           help="Aplica pré-processamento (para CSVs não processados)")
     p_train.add_argument("--eda", action="store_true",
                           help="Executa EDA antes do treinamento")
+    p_train.add_argument("--optimize", action="store_true",
+                          help="Otimiza hiperparâmetros via GridSearchCV antes do treinamento")
 
     # predict
     p_pred = sub.add_parser("predict", help="Classifica uma notícia .txt")

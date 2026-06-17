@@ -4,6 +4,7 @@ Treinamento dos três modelos: Naive Bayes, SVM e Random Forest.
 """
 
 import os
+import json
 import joblib
 import pandas as pd
 import numpy as np
@@ -19,6 +20,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from src.preprocessing.text_processor import preprocess
 from src.feature_extraction.vectorizer import build_tfidf, build_bow, save_vectorizer
 from src.evaluation.metrics import evaluate_model
+from src.training.hyperparam_optimizer import optimize_model, get_base_estimator
 
 MODELS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "models")
 DATA_DIR   = os.path.join(os.path.dirname(__file__), "..", "..", "data")
@@ -95,7 +97,8 @@ def get_models():
 
 
 def train_all(csv_path: str, vectorizer_type: str = "tfidf",
-              already_preprocessed: bool = True, test_size: float = 0.2):
+              already_preprocessed: bool = True, test_size: float = 0.2,
+              optimize: bool = False):
     """
     Pipeline completo de treinamento.
     Persiste modelos + vetorizador em models/.
@@ -128,6 +131,28 @@ def train_all(csv_path: str, vectorizer_type: str = "tfidf",
 
     for name, model in models.items():
         print(f"\n=== TREINANDO: {name.upper()} ===")
+
+        if optimize:
+            print(f">>> Otimizando hiperparametros para {name}...")
+            best_params, best_cv_f1 = optimize_model(name, X_train_vec, y_train)
+
+            # Persiste melhores parametros como JSON
+            params_path = os.path.join(MODELS_DIR, f"{name}_best_params.json")
+            with open(params_path, "w", encoding="utf-8") as f:
+                json.dump({
+                    "model": name,
+                    "best_params": best_params,
+                    "best_cv_f1": round(best_cv_f1, 4),
+                }, f, indent=2, ensure_ascii=False)
+            print(f"  Melhores parametros salvos: {params_path}")
+
+            # Reconstroi modelo com os melhores parametros
+            if name == "svm":
+                base_svm = LinearSVC(**best_params, dual="auto", random_state=42)
+                model = CalibratedClassifierCV(base_svm, cv=3)
+            else:
+                model = get_base_estimator(name).set_params(**best_params)
+
         model.fit(X_train_vec, y_train)
 
         model_path = os.path.join(MODELS_DIR, f"{name}.pkl")
