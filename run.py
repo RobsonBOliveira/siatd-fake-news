@@ -1,6 +1,6 @@
 """
 run.py
-Ponto de entrada principal do SATD de Fake News.
+Ponto de entrada principal do SIATD de Fake News.
 
 Uso:
   python run.py train   <caminho_csv> [--vec tfidf|bow] [--raw] [--eda] [--optimize]
@@ -140,7 +140,7 @@ def cmd_demo(_args):
     sample    = "governo esconde verdade sobre vacina microchip conspiracao revelado"
     result    = predictor.predict(sample)
 
-    print("\n--- Resultado do SATD ---")
+    print("\n--- Resultado do SIATD ---")
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
     os.unlink(csv_path)
@@ -149,7 +149,7 @@ def cmd_demo(_args):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="SATD – Sistema de Apoio à Tomada de Decisão para Fake News"
+        description="SIATD – Sistema Inteligente de Apoio à Tomada de Decisão para Fake News"
     )
     sub = parser.add_subparsers(dest="command")
 

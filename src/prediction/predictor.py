@@ -1,6 +1,6 @@
 """
 src/prediction/predictor.py
-Sistema de Apoio à Tomada de Decisão (SATD).
+Sistema Inteligente de Apoio à Tomada de Decisão (SIATD).
 Gera: probabilidades, nível de confiança, palavras relevantes, similaridade.
 """
 
@@ -27,7 +27,7 @@ CONF_MEDIUM = 0.65
 class FakeNewsPredictor:
     """
     Carrega o modelo persistido e o vetorizador e executa predição
-    com saída de apoio à decisão (SATD).
+    com saída de apoio à decisão (SIATD).
     """
 
     def __init__(self, model_name: str = "svm", vectorizer_type: str = "tfidf"):
@@ -60,7 +60,7 @@ class FakeNewsPredictor:
     def predict(self, text: str) -> dict:
         """
         Recebe texto bruto, aplica pré-processamento e retorna
-        dicionário com todos os indicadores do SATD.
+        dicionário com todos os indicadores do SIATD.
         """
         processed = preprocess(text)
         vec       = self.vectorizer.transform([processed])

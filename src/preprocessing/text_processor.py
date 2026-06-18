@@ -1,6 +1,6 @@
 """
 src/preprocessing/text_processor.py
-Pipeline de pré-processamento textual para o SATD de Fake News.
+Pipeline de pré-processamento textual para o SIATD de Fake News.
 Reproduz o padrão do Fake.Br Corpus (preprocessed).
 """
 

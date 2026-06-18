@@ -1,6 +1,6 @@
 """
 src/prediction/visualization.py
-Gera grafico com os resultados da predicao do SATD.
+Gera grafico com os resultados da predicao do SIATD.
 
 O grafico exibe:
   - Classificacao (Fake / Verdadeira) com nivel de confianca
@@ -86,7 +86,7 @@ def plot_prediction_result(result: dict,
 
     # -- Titulo principal --
     fig.suptitle(
-        f"SATD – Resultado da Predicao",
+        f"SIATD – Resultado da Predicao",
         fontsize=18, fontweight="bold", y=0.98,
     )
 
