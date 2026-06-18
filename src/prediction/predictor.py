@@ -14,6 +14,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from src.preprocessing.text_processor import preprocess
+from src.prediction.visualization import plot_prediction_result
 
 MODELS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "models")
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "output")
@@ -167,6 +168,12 @@ def predict_from_file(txt_path: str, model_name: str = "svm",
 
     print(json.dumps(result, ensure_ascii=False, indent=2))
     print(f"\nResultado salvo em: {out}")
+
+    # Gera grafico com os dados da predicao
+    chart_path = plot_prediction_result(result, output_dir=OUTPUT_DIR)
+    if chart_path:
+        print(f"Grafico salvo em: {chart_path}")
+
     return result
 
 

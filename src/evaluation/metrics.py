@@ -22,6 +22,18 @@ except ImportError:
 
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "output")
 
+# Cores consistentes por modelo
+MODEL_COLORS = {
+    "naive_bayes":   "#3498DB",  # azul
+    "svm":           "#E74C3C",  # vermelho
+    "random_forest": "#2ECC71",  # verde
+}
+MODEL_LABELS = {
+    "naive_bayes":   "Naive Bayes",
+    "svm":           "SVM",
+    "random_forest": "Random Forest",
+}
+
 
 def evaluate_model(model, X_test, y_test, model_name: str) -> dict:
     y_pred = model.predict(X_test)
@@ -66,8 +78,81 @@ def _plot_confusion_matrix(cm: list, model_name: str):
     print(f"  Matriz salva: {path}")
 
 
+def _plot_model_comparison(all_metrics: dict) -> str:
+    """
+    Gera grafico de barras agrupadas comparando Accuracy, Precision,
+    Recall e F1-Score entre os tres modelos.
+
+    Returns:
+        Caminho do arquivo PNG gerado, ou string vazia se matplotlib indisponivel.
+    """
+    if not HAS_PLOT:
+        return ""
+
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    filepath = os.path.join(OUTPUT_DIR, "model_comparison.png")
+
+    model_names = list(all_metrics.keys())
+    metric_keys = ["accuracy", "precision", "recall", "f1_score"]
+    metric_labels = ["Accuracy", "Precision", "Recall", "F1-Score"]
+
+    n_models = len(model_names)
+    n_metrics = len(metric_keys)
+    x = np.arange(n_metrics)
+    bar_width = 0.25
+    # Centraliza o grupo de barras
+    offsets = np.linspace(
+        -bar_width * (n_models - 1) / 2,
+        bar_width * (n_models - 1) / 2,
+        n_models,
+    )
+
+    fig, ax = plt.subplots(figsize=(11, 6))
+    fig.patch.set_facecolor("#FAFAFA")
+    ax.set_facecolor("#FAFAFA")
+
+    for i, name in enumerate(model_names):
+        values = [all_metrics[name][k] for k in metric_keys]
+        color = MODEL_COLORS.get(name, "#999999")
+        label = MODEL_LABELS.get(name, name)
+        bars = ax.bar(
+            x + offsets[i], values, bar_width,
+            color=color, alpha=0.85, edgecolor="white",
+            linewidth=0.8, label=label, zorder=3,
+        )
+        # Anotacoes de valor no topo de cada barra
+        for bar, val in zip(bars, values):
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                bar.get_height() + 0.008,
+                f"{val:.4f}", ha="center", va="bottom",
+                fontsize=9, fontweight="bold", color="#333333",
+            )
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(metric_labels, fontsize=11)
+    ax.set_ylim(0, 1.12)
+    ax.set_ylabel("Score", fontsize=11, color="#555555")
+    ax.set_title("Comparacao de Modelos – Metricas de Avaliacao",
+                 fontsize=15, fontweight="bold", pad=15)
+    ax.legend(loc="lower right", fontsize=10, framealpha=0.9,
+              edgecolor="#CCCCCC")
+    ax.grid(axis="y", alpha=0.3, linestyle="--", zorder=0)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_color("#DDDDDD")
+    ax.spines["bottom"].set_color("#DDDDDD")
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y:.0%}"))
+
+    fig.tight_layout()
+    fig.savefig(filepath, dpi=150, facecolor=fig.get_facecolor(),
+                edgecolor="none")
+    plt.close(fig)
+    return filepath
+
+
 def compare_models(all_metrics: dict):
-    """Exibe tabela comparativa e salva JSON com resultados."""
+    """Exibe tabela comparativa, gera grafico e salva JSON com resultados."""
     print("\n" + "=" * 60)
     print("COMPARAÇÃO DE MODELOS")
     print("=" * 60)
@@ -83,3 +168,8 @@ def compare_models(all_metrics: dict):
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(all_metrics, f, ensure_ascii=False, indent=2)
     print(f"\nResultados salvos em: {out_path}")
+
+    # Gera grafico comparativo
+    chart_path = _plot_model_comparison(all_metrics)
+    if chart_path:
+        print(f"Grafico comparativo salvo em: {chart_path}")
