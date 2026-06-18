@@ -132,7 +132,7 @@ def train_all(csv_path: str, vectorizer_type: str = "tfidf",
     for name, model in models.items():
         print(f"\n=== TREINANDO: {name.upper()} ===")
 
-        if optimize:
+        if optimize and name != "random_forest":
             print(f">>> Otimizando hiperparametros para {name}...")
             best_params, best_cv_f1 = optimize_model(name, X_train_vec, y_train)
 

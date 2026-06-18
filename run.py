@@ -163,7 +163,7 @@ def main():
     p_train.add_argument("--eda", action="store_true",
                           help="Executa EDA antes do treinamento")
     p_train.add_argument("--optimize", action="store_true",
-                          help="Otimiza hiperparâmetros via GridSearchCV antes do treinamento")
+                          help="Otimiza hiperparâmetros via GridSearchCV (Naive Bayes e SVM; Random Forest usa parâmetros padrão)")
 
     # predict
     p_pred = sub.add_parser("predict", help="Classifica uma notícia .txt")

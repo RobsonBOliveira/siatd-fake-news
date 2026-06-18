@@ -1,12 +1,12 @@
 """
 src/training/hyperparam_optimizer.py
-Otimizacao de hiperparametros via GridSearchCV para os tres modelos do SATD.
+Otimizacao de hiperparametros via GridSearchCV para Naive Bayes e SVM.
+Random Forest utiliza seus hiperparametros padrao (nao participa do GridSearch).
 """
 
 import os
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.svm import LinearSVC
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV
 
 # ---------------------------------------------------------------------------
@@ -26,15 +26,6 @@ SVM_GRID = {
 }
 """24 combinacoes (4 x 3 x 2)."""
 
-RANDOM_FOREST_GRID = {
-    "n_estimators": [100, 200],
-    "max_depth": [None, 20, 30],
-    "min_samples_split": [2, 5],
-    "min_samples_leaf": [1, 2],
-}
-"""24 combinacoes (2 x 3 x 2 x 2). Grid reduzido para evitar travamento
-por consumo excessivo de memoria no Windows com GridSearchCV + n_jobs=-1.
-Ainda cobre bem o espaco de busca: arvores, profundidade, split e leaf."""
 
 # ---------------------------------------------------------------------------
 # Funcoes auxiliares
@@ -46,7 +37,6 @@ def get_param_grid(model_name: str) -> dict:
     grids = {
         "naive_bayes": NAIVE_BAYES_GRID,
         "svm": SVM_GRID,
-        "random_forest": RANDOM_FOREST_GRID,
     }
     if model_name not in grids:
         raise ValueError(
@@ -62,22 +52,15 @@ def get_base_estimator(model_name: str):
 
     Parametros fixos (nao otimizaveis):
       - LinearSVC: dual='auto', random_state=42
-      - RandomForest: n_jobs=-1, random_state=42
     """
     if model_name == "naive_bayes":
         return MultinomialNB()
     elif model_name == "svm":
         return LinearSVC(dual="auto", random_state=42)
-    elif model_name == "random_forest":
-        # n_jobs=1 para evitar nested parallelism: o GridSearchCV ja gerencia
-        # o paralelismo externo (via n_jobs). Com n_jobs=-1 aqui, cada worker
-        # do GridSearch tentaria usar todos os nucleos, gerando contencao
-        # e travamento no Windows (especialmente com matrizes esparsas).
-        return RandomForestClassifier(n_jobs=1, random_state=42)
     else:
         raise ValueError(
             f"Modelo '{model_name}' desconhecido. "
-            f"Opcoes: naive_bayes, svm, random_forest"
+            f"Opcoes: naive_bayes, svm"
         )
 
 
@@ -87,7 +70,7 @@ def optimize_model(model_name: str, X_train, y_train, cv: int = 3,
     Executa GridSearchCV para o modelo indicado.
 
     Args:
-        model_name: "naive_bayes", "svm" ou "random_forest".
+        model_name: "naive_bayes" ou "svm".
         X_train: matriz de features de treino (sparse ou densa).
         y_train: rotulos de treino.
         cv: numero de folds para validacao cruzada.
@@ -100,7 +83,7 @@ def optimize_model(model_name: str, X_train, y_train, cv: int = 3,
     estimator = get_base_estimator(model_name)
 
     # Limita paralelismo para evitar travamento no Windows:
-    # - n_jobs=-1 com matrix esparsa + RandomForest esgota a RAM rapidamente
+    # - n_jobs=-1 com matriz esparsa pode esgotar a RAM rapidamente
     #   (cada worker do joblib recebe uma copia completa dos dados).
     # - Usamos no maximo 2 workers, que e seguro para a maioria das maquinas.
     # - pre_dispatch='n_jobs' evita que o GridSearchCV prepare todos os jobs
