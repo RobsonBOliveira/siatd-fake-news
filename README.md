@@ -18,22 +18,27 @@ siatd_fake_news/
 │   ├── svm.pkl
 │   ├── random_forest.pkl
 │   ├── tfidf.pkl
-│   └── meta.pkl
+│   ├── meta.pkl
+│   ├── naive_bayes_best_params.json
+│   └── svm_best_params.json
 ├── src/
 │   ├── eda/
-│   │   ├── exploratory_analysis.py ← Análise exploratória de dados
-│   │   ├── visualization.py        ← Gráficos e word clouds
-│   │   └── report_generator.py     ← Relatório automático (Markdown)
+│   │   ├── exploratory_analysis.py  ← Análise exploratória de dados
+│   │   ├── visualization.py         ← Gráficos e word clouds
+│   │   ├── report_generator.py      ← Relatório automático (Markdown)
+│   │   └── architecture_diagram.py  ← Diagrama arquitetural (Figura 1)
 │   ├── preprocessing/
 │   │   └── text_processor.py    ← Pipeline de limpeza e normalização
 │   ├── feature_extraction/
 │   │   └── vectorizer.py        ← TF-IDF e Bag of Words
 │   ├── training/
-│   │   └── trainer.py           ← Treinamento dos 3 modelos
+│   │   ├── trainer.py           ← Treinamento dos 3 modelos
+│   │   └── hyperparam_optimizer.py ← GridSearchCV (NB + SVM)
 │   ├── evaluation/
-│   │   └── metrics.py           ← Métricas e matrizes de confusão
+│   │   └── metrics.py           ← Métricas, matrizes de confusão e gráfico comparativo
 │   └── prediction/
-│       └── predictor.py         ← SIATD: probabilidade, confiança, palavras
+│       ├── predictor.py         ← SIATD: probabilidade, confiança, palavras
+│       └── visualization.py     ← Gráfico de resultado da predição
 ├── input/                       ← Notícia a classificar
 │   └── noticia.txt
 ├── output/
@@ -46,7 +51,10 @@ siatd_fake_news/
 │   │   ├── wordcloud_*.png
 │   │   └── correlation_mi.png
 │   ├── resultado.json           ← Saída do SIATD
-│   ├── model_comparison.json    ← Métricas comparativas
+│   ├── model_comparison.json    ← Métricas comparativas (JSON)
+│   ├── model_comparison.png     ← Gráfico comparativo dos 3 modelos
+│   ├── architecture_diagram.png ← Diagrama arquitetural do sistema
+│   ├── prediction_*.png         ← Gráfico de resultado da predição
 │   └── confusion_matrix_*.png   ← Matrizes de confusão
 ├── run.py                       ← Ponto de entrada principal
 ├── clean.py                     ← Rotina de limpeza
@@ -156,7 +164,9 @@ Gera dados sintéticos, treina e executa uma predição de ponta a ponta.
 
 ---
 
-## Saída do SIATD (`output/resultado.json`)
+## Saída do SIATD
+
+### JSON (`output/resultado.json`)
 
 ```json
 {
@@ -187,6 +197,22 @@ Gera dados sintéticos, treina e executa uma predição de ponta a ponta.
 | `palavras_relevantes` | Top-15 termos TF-IDF que contribuíram para a predição |
 | `texto_processado`  | Texto após o pipeline de limpeza (trecho) |
 
+### Gráfico da Predição (`output/prediction_<vec>_<modelo>.png`)
+
+Além do JSON, a predição gera automaticamente um gráfico de 3 painéis
+consolidando todos os dados relevantes:
+
+| Painel | Conteúdo |
+|--------|----------|
+| Classificação + Confiança | Destaque visual (Fake = vermelho, Verdadeira = verde) com nível de confiança colorido |
+| Probabilidades | Barras horizontais comparando P(Fake) vs P(Verdadeira) com percentuais |
+| Palavras Relevantes | Top-10 termos com maior peso no vetor TF-IDF, com gradiente de cor |
+
+O nome do arquivo reflete o vetorizador e o modelo utilizados. Exemplos:
+- `prediction_tfidf_svm.png`
+- `prediction_bow_random_forest.png`
+- `prediction_tfidf_naive_bayes.png`
+
 ---
 
 ## Pipeline de Pré-Processamento
@@ -215,8 +241,17 @@ O módulo `src/preprocessing/text_processor.py` reproduz o padrão do Fake.Br Co
 
 ## Métricas Avaliadas
 
-- Accuracy, Precision, Recall, F1-Score
-- Confusion Matrix (PNG em `output/`)
-- Comparação entre modelos (`output/model_comparison.json`)
+Durante o treinamento, cada modelo é avaliado individualmente e ao final é
+gerada uma comparação consolidada:
 
----
+### Métricas por Modelo
+- Accuracy, Precision, Recall, F1-Score
+- Classification Report completo (scikit-learn)
+- Matriz de Confusão em heatmap → `output/confusion_matrix_<modelo>.png`
+
+### Comparação entre Modelos
+
+| Artefato | Descrição |
+|----------|-----------|
+| `output/model_comparison.json` | Métricas de todos os modelos em JSON |
+| `output/model_comparison.png` | Gráfico de barras agrupadas comparando Accuracy, Precision, Recall e F1-Score dos 3 modelos lado a lado, com cores consistentes e valores anotados |
